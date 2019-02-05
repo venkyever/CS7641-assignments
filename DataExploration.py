@@ -20,6 +20,7 @@ Plots:
 - Treemaps
 
 """
+import random
 
 import pandas as pd
 import numpy as np
@@ -30,6 +31,7 @@ from sklearn.utils import shuffle
 
 np.random.seed(42)
 random.seed(42)
+
 
 class DataExploration:
     def __init__(self):
