@@ -1,0 +1,9 @@
+./.ipynb_checkpoints/*
+.idea/*
+*.ipynb
+*.pyc
+/.ipynb_checkpoints/
+/dnn_dir/
+/output/
+/data/
+!/main_notebook.ipynb
