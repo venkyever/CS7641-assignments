@@ -53,7 +53,7 @@ class NN_Keras:
         if self.best_params is not None and not override_best_params:
             nn_model = KerasClassifier(build_fn=self.create_model(layer_sizes=self.best_params['layer_sizes'],
                                                                   learning_rate=self.best_params['learning_rate'],
-                                                                  loss=self.best_params['learning_rate']),
+                                                                  loss=self.best_params['loss']),
                                        epochs=self.best_params['epochs'],
                                        batch_size=self.best_params['batch_size'],
                                        verbose=0)
