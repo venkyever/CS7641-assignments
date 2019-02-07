@@ -1,9 +1,15 @@
+import datetime
+from collections import defaultdict
+from time import clock
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+from sklearn.externals import joblib
+from sklearn.metrics import accuracy_score
 
-from sklearn.model_selection import learning_curve
+from sklearn.model_selection import learning_curve, GridSearchCV
 
 
 # Plot distributions of counts
@@ -36,39 +42,61 @@ def plot_distribution(pd_df, title, col_to_get_distr):
         plt.show()
 
 
-def compare_counts_boxplots(positive_pd, negative_pd, cols, title, type_plot):
+def compare_counts_boxplots(positive_pd, negative_pd, title, dataset_name, positive_label, cols=None):
     # unique_col_values = df_pd[feature_column].unique()
     # print unique_col_values
+    if cols is None:
+        cols = positive_pd.columns.values.tolist()
 
     data = []
     labels = []
     for col in cols:
         data.append(positive_pd[col])
         data.append(negative_pd[col])
-        labels.append('p_{0}'.format(col))
-        labels.append('n_{0}'.format(col))
+        labels.append(f'{positive_label}_{col}')
+        labels.append(f'not_{positive_label}_{col}')
 
     with plt.style.context('ggplot'):
         plt.figure(figsize=(35, 20))
         plt.ylabel('Counts')
-        # plt.xlabel()
         plt.title(title)
-        if type_plot == 'boxplot':
-            plt.boxplot(data, showfliers=False)
-        elif type_plot == 'violinplot':
-            plt.violinplot(data, showmeans=False, showextrema=False, showmedians=True,
-                           bw_method='silverman')
+        plt.boxplot(data, showfliers=False)
         plt.xticks(np.arange(start=1, stop=len(data) + 1), labels)
-
-        plt.show()
+        plt.savefig(f"./figs/data/{dataset_name}_barplots.png")
 
 
 def create_scatterplot_matrix(pd_df, label_column, dataset_name):
     sns.set(style="ticks")
+    cols_to_plot = pd_df.columns.values
+    cols_to_plot = np.delete(cols_to_plot, np.where(cols_to_plot == label_column)).tolist()
+    print(cols_to_plot)
+    pairplot = sns.pairplot(pd_df, hue=label_column, markers=["o", "+"], vars=cols_to_plot)
+    pairplot.savefig(f"./figs/data/{dataset_name}_scatterplot_matrix.png")
+    return pairplot
 
-    scatterplot_matrix = sns.pairplot(pd_df, hue=label_column)
-    plt.title(f"{dataset_name}  Scatterplot Matrix")
-    scatterplot_matrix.savefig(f"{dataset_name}_scatterplot_matrix.png")
+
+def plot_violin_distributions(pd_df, title, dataset_name, label_column, cols_to_plot=None):
+    if cols_to_plot is None:
+        cols_to_plot = pd_df.columns.values
+        cols_to_plot = np.delete(cols_to_plot, np.where(cols_to_plot == label_column)).tolist()
+        print(cols_to_plot)
+    fig, axes = plt.subplots(nrows=3, ncols=2, figsize=(20, 22))
+    axes = axes.flatten()
+
+    for col, ax in zip(cols_to_plot, axes):
+        ax.set_title(col + ' violinplot')
+        create_violin_plot(pd_df, col, label_column, ax)
+        ax.set(ylabel='count of {0}'.format(col))
+
+    plt.suptitle(title, fontsize=16, verticalalignment='baseline')
+    # plt.subplots_adjust(left=0.5)
+
+    plt.savefig(f"./figs/data/{dataset_name}_violinplot_matrix.png")
+
+
+def create_violin_plot(pd_df, column, label_column, axes):
+    sns.set(style="ticks")
+    sns.violinplot(data=pd_df, x=label_column, y=column, ax=axes, kind='violin', cut=0)
 
 
 def plot_learning_curve(estimator, title, X, y, algorithm, dataset_name, model_name, y_lim=None, cv=None,
@@ -159,8 +187,46 @@ def plot_learning_curve(estimator, title, X, y, algorithm, dataset_name, model_n
 
 
 def plot_iterative_learning_curve(clfObj, trgX, trgY, tstX, tstY, params, clf_type=None, dataset=None):
-    return
+    # also adopted from jontays code
+    np.random.seed(42)
+    if clf_type is None or dataset is None:
+        raise
+    cv = GridSearchCV(clfObj, n_jobs=1, param_grid=params, refit=True, verbose=10, cv=5, scoring=scorer)
+    cv.fit(trgX, trgY)
+    regTable = pd.DataFrame(cv.cv_results_)
+    regTable.to_csv('./output/ITER_base_{}_{}.csv'.format(clf_type, dataset), index=False)
+    d = defaultdict(list)
+    name = list(params.keys())[0]
+    for value in list(params.values())[0]:
+        d['param_{}'.format(name)].append(value)
+        clfObj.set_params(**{name: value})
+        clfObj.fit(trgX, trgY)
+        pred = clfObj.predict(trgX)
+        d['train acc'].append(accuracy_score(trgY, pred))
+        clfObj.fit(trgX, trgY)
+        pred = clfObj.predict(tstX)
+        d['test acc'].append(accuracy_score(tstY, pred))
+        print(value)
+    d = pd.DataFrame(d)
+    d.to_csv('./output/ITERtestSET_{}_{}.csv'.format(clf_type, dataset), index=False)
+    return cv
 
+def make_timing_curve(X_train, y_train, X_test, y_test, clf, clfName, dataset):
+    # 'adopted' from JonTay's code
+    timing_df = defaultdict(dict)
+    for fraction in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]:
+        st = clock()
+        np.random.seed(42)
+        clf.fit(X_train, y_train)
+        timing_df['train'][fraction] = clock() - st
+        st = clock()
+        clf.predict(X_test)
+        timing_df['test'][fraction] = clock() - st
+        print(clfName, dataset, fraction)
+    timing_df = pd.DataFrame(timing_df)
+    timing_df.to_csv(f'./output/{clfName}_{dataset}_timing.csv')
+    #todo insert plot function
+    return timing_df
 
 def plot_model_timing(title, data_sizes, fit_scores, predict_scores, ylim=None):
     """
@@ -184,6 +250,7 @@ def plot_model_timing(title, data_sizes, fit_scores, predict_scores, ylim=None):
         The predict times
 
     """
+
     plt.close()
     plt.figure()
     plt.title(title)
@@ -231,3 +298,8 @@ def _save_cv_results(self):
     plt.show()
 
     # todo make timing curve
+
+
+def save_model(dataset_name, estimator, file_name):
+    file_name = dataset_name + '_' + file_name + '_' + str(datetime.datetime.now().date()) + '.pkl'
+    joblib.dump(estimator, f'./models/{file_name}')

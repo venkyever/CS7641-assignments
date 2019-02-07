@@ -11,8 +11,10 @@ from keras.models import Sequential
 from keras.layers import Dense
 from keras.wrappers.scikit_learn import KerasClassifier
 import tensorflow as tf
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 
-from utils import plot_learning_curve
+from utils import plot_learning_curve, save_model
 
 config = tf.ConfigProto(allow_soft_placement=True)
 config.gpu_options.per_process_gpu_memory_fraction = 1.0
@@ -40,8 +42,8 @@ class NN_Keras:
         if layer_sizes is None:
             layer_sizes = [12, 1]
         model = Sequential()
-        model.add(Dense(layer_sizes[0], input_dim=6, activation='relu'))
-        model.add(Dense(layer_sizes[1], activation='softmax'))
+        model.add(Dense(layer_sizes[0], input_dim=299, activation='relu'))
+        model.add(Dense(1, input_dim=layer_sizes[1], activation='softmax'))
 
         # Adam was best for twitter data
         optimizer = Adam(lr=learning_rate)
@@ -50,6 +52,7 @@ class NN_Keras:
         return model
 
     def train(self, X_train, y_train, optimizer_tuning=False, override_best_params=False):
+
         if self.best_params is not None and not override_best_params:
             nn_model = KerasClassifier(build_fn=self.create_model(layer_sizes=self.best_params['layer_sizes'],
                                                                   learning_rate=self.best_params['learning_rate'],
@@ -57,12 +60,20 @@ class NN_Keras:
                                        epochs=self.best_params['epochs'],
                                        batch_size=self.best_params['batch_size'],
                                        verbose=0)
-            nn_model.fit(X_train, y_train)
+            pipe = Pipeline(steps=[('scale', StandardScaler()),
+                                   ('dnn', nn_model)])
 
-            self.nn_model = nn_model
-            estimator = nn_model
+            pipe.fit(X_train, y_train)
+
+            self.nn_model = pipe
+            estimator = pipe
+            try:
+                save_model(self.dataset_name, estimator, 'dnn_estimator')
+            except:
+                print('unable to save model this way (best param)')
         else:
             if optimizer_tuning:
+
                 nn_model = KerasClassifier(build_fn=self.create_model_optimizer, epochs=100, batch_size=10, verbose=0)
 
                 param_grid = {
@@ -72,15 +83,19 @@ class NN_Keras:
                 nn_model = KerasClassifier(build_fn=self.create_model, epochs=100, batch_size=10, verbose=0)
 
                 param_grid = {
-                    'layer_sizes': [[12, 1]],
-                    'learning_rate': [0.0005, 0.001, 0.05, 0.01, 0.1],
-                    'loss': ['mean_squared_error', 'logcosh', 'binary_crossentropy', 'mean_squared_logarithmic_error'],
-                    'batch_size': [10, 50, 100, 200, 500, 1000],
-                    'epochs': [1, 10, 30, 60, 100]
+                    'dnn__layer_sizes': [[180, 50]],
+                    'dnn__learning_rate': [0.0005, 0.001, 0.05, 0.1],
+                    'dnn__loss': ['mean_squared_error'], #, 'logcosh', 'binary_crossentropy',
+                    #               'mean_squared_logarithmic_error'],
+                    'dnn__batch_size': [10, 50, 100, 200, 500, 1000],
+                    'dnn__epochs': [1, 10, 30, 60, 100]
                     # 'momentum': [0.0, 0.2, 0.4, 0.6, 0.8, 0.9] RESULTS SHOWED 0 was best..., pretty useless then
                 }
 
-            grid = GridSearchCV(estimator=nn_model, param_grid=param_grid, n_jobs=-1, verbose=2)
+            pipe = Pipeline(steps=[('scale', StandardScaler()),
+                                   ('dnn', nn_model)])
+
+            grid = GridSearchCV(estimator=pipe, param_grid=param_grid, cv=5, n_jobs=3, verbose=2)
             grid_result = grid.fit(X_train, y_train)
 
             # summarize results
@@ -94,6 +109,10 @@ class NN_Keras:
             self.nn_model = grid
             self.best_params = grid_result.best_params_
             estimator = grid.best_estimator_
+            try:
+                save_model(self.dataset_name, estimator, 'dnn_estimator')
+            except:
+                print('unable to save model this way')
 
         plt = plot_learning_curve(title='Learning Curves (DNN)', estimator=estimator, X=X_train, y=y_train, cv=5,
                                   algorithm='DNN', dataset_name=self.dataset_name, model_name=self.model_name)

@@ -9,7 +9,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-from utils import plot_learning_curve
+from utils import plot_learning_curve, save_model
 
 
 class KNN:
@@ -29,6 +29,7 @@ class KNN:
             pipe.fit(X_train, y_train)
 
             self.knn_model = pipe
+            save_model(self.dataset_name, pipe, 'knn_estimator')
             estimator = pipe.named_steps['knn']
         else:
             param_grid = {
@@ -45,6 +46,8 @@ class KNN:
 
             self.knn_model = knn_clf
             self.best_params = knn_clf.best_params_
+
+            save_model(self.dataset_name, knn_clf.best_estimator_, 'knn_estimator')
             estimator = knn_clf.best_estimator_.named_steps['knn']
 
         plt = plot_learning_curve(title='Learning Curves (K-NN)', estimator=estimator, X=X_train, y=y_train,

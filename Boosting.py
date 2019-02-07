@@ -13,7 +13,7 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import StandardScaler
 
 from DecisionTree import DecisionTreeClassifier
-from utils import plot_learning_curve
+from utils import plot_learning_curve, save_model
 
 
 class Boosting:
@@ -39,6 +39,7 @@ class Boosting:
             pipe.set_params(**self.best_params)
             pipe.fit(X_train, y_train)
 
+            save_model(self.dataset_name, pipe, 'boosting_estimator')
             self.boosting_model = pipe
             estimator = pipe.named_steps['boost']
         else:
@@ -55,6 +56,7 @@ class Boosting:
 
             self.boosting_model = boosting_clf
             self.best_params = boosting_clf.best_params_
+            save_model(self.dataset_name, boosting_clf.best_estimator_, 'boosting_estimator')
             estimator = boosting_clf.best_estimator_.named_steps['boost']
 
         plt = plot_learning_curve(title='Learning Curves (Boosting)', estimator=estimator, X=X_train, y=y_train,

@@ -31,10 +31,10 @@ class SVM:
             estimator = pipe.named_steps['svm']
         else:
             param_grid = {
-                'svm__kernel': ['linear', 'poly', 'rbf', 'sigmoid'],
-                'svm__degree': np.arange(1, X_train.shape[1] + 1)
-                # 'svm__gamma': np.power(2, np.arange(-X_train.shape[1], 1, 2, dtype=float)),
-                # 'svm__C': np.power(2, np.arange(-X_train.shape[1],0, 2, dtype=float))
+                'svm__kernel': ['rbf'], #['linear', 'poly', 'rbf', 'sigmoid'],
+                'svm__degree': np.arange(1, X_train.shape[1] + 1),
+                'svm__gamma': np.power(2, np.arange(-X_train.shape[1], 1, 2, dtype=float)),
+                'svm__C': np.power(2, np.arange(-X_train.shape[1],0, 2, dtype=float))
             }
 
             # scoring = {'Accuracy': make_scorer(accuracy_score)}  # 'AUC': 'roc_auc',

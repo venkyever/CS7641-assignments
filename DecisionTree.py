@@ -7,7 +7,7 @@ from sklearn.model_selection import GridSearchCV, learning_curve
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-from utils import plot_learning_curve
+from utils import plot_learning_curve, save_model
 
 
 class DecisionTreeClassifier(tree.DecisionTreeClassifier):
@@ -100,6 +100,8 @@ class DecisionTree:
             pipe.set_params(**self.best_params)
             pipe.fit(X_train, y_train)
 
+            save_model(self.dataset_name, pipe, 'dt_estimator')
+
             self.dt_model = pipe
             estimator = pipe.named_steps['dt']
         else:
@@ -123,6 +125,7 @@ class DecisionTree:
 
             self.dt_model = dt_clf
             self.best_params = dt_clf.best_params_
+            save_model(self.dataset_name, dt_clf.best_estimator_, 'dt_estimator')
             estimator = dt_clf.best_estimator_.named_steps['dt']
 
         plt = plot_learning_curve(title='Learning Curves (DT)', estimator=estimator, X=X_train, y=y_train,

@@ -103,8 +103,67 @@ class DataExploration:
 
     @staticmethod
     def prepare_speed_dating_df():
-        speed_dating_df = pd.read_csv('./data/speeddating.csv')
+        speed_dating_df = pd.read_csv('./data/speeddating.csv', low_memory=False)
+        cols_of_interest = ['gender', 'age', 'age_o', 'race', 'race_o', 'importance_same_race',
+                            'importance_same_religion', 'field', 'attractive_important', 'sincere_important',
+                            'intellicence_important', 'funny_important', 'ambtition_important',
+                            'shared_interests_important', 'attractive', 'sincere', 'intelligence', 'funny', 'ambition',
+                            'attractive_partner', 'sincere_partner', 'intelligence_partner', 'funny_partner',
+                            'ambition_partner', 'shared_interests_partner', 'sports', 'tvsports', 'exercise', 'dining',
+                            'museums', 'art', 'hiking', 'gaming', 'clubbing', 'reading', 'tv', 'theater', 'movies',
+                            'concerts', 'music', 'shopping', 'yoga', 'interests_correlate', 'decision']
+        todo_see_if_improves = ['d_age', 'samerace', 'pref_o_attractive', 'pref_o_sinsere', 'pref_o_intelligence',
+                                'pref_o_funny', 'pref_o_ambitious', 'pref_o_shared_interests', 'attractive_o',
+                                'sincere_o', 'intelligence_o', 'funny_o', 'ambitous_o', 'shared_interests_o',
+                                'decision_o', 'match']
+        speed_dating_df = speed_dating_df[cols_of_interest]
+        print(speed_dating_df.shape)
+
+        for col in cols_of_interest:
+            speed_dating_df = speed_dating_df[speed_dating_df[col] != "?"]
+
+
+        speed_dating_df = speed_dating_df[~speed_dating_df.isin([np.nan, np.inf, -np.inf]).any(1)]
+        speed_dating_df = speed_dating_df.dropna(axis=0)
+
+        print('removing empty values shape:')
+        print(speed_dating_df.shape)
+
         return speed_dating_df
+
+    @staticmethod
+    def get_hot_encoded_speed_dating(speed_dating_df):
+        labelled_speed_dating_df = speed_dating_df
+        le = preprocessing.LabelEncoder()
+        ohe = preprocessing.OneHotEncoder()
+        cols_to_encode = ['gender', 'race', 'race_o', 'field']
+        encoded_cols = []
+        for col in cols_to_encode:
+            encoded_cols.append(str(col + '_encoded'))
+            labelled_speed_dating_df[str(col + '_encoded')] = le.fit_transform(labelled_speed_dating_df[col])
+
+        encoded_speed_dating_df = labelled_speed_dating_df
+
+        for encoded_col, col in zip(encoded_cols, cols_to_encode):
+            X = ohe.fit_transform(X=speed_dating_df[encoded_col].values.reshape(-1, 1)).toarray()
+            temp_df = pd.DataFrame(X, columns=[col + str(int(i)) for i in range(X.shape[1])])
+            encoded_speed_dating_df = pd.concat([encoded_speed_dating_df, temp_df], axis=1)
+            encoded_speed_dating_df = encoded_speed_dating_df.drop(col, axis=1).drop(encoded_col, axis=1)
+
+        for col in encoded_speed_dating_df.columns.values:
+            encoded_speed_dating_df[col] = pd.to_numeric(encoded_speed_dating_df[col])
+
+        # print(encoded_speed_dating_df[encoded_speed_dating_df.isin([np.nan, np.inf, -np.inf]).any(1)])
+        encoded_speed_dating_df = encoded_speed_dating_df[
+            ~encoded_speed_dating_df.isin([np.nan, np.inf, -np.inf]).any(1)].astype(np.float64).dropna(axis=0)
+
+        # print(encoded_speed_dating_df)
+        #
+        # print(np.any(np.isnan(encoded_speed_dating_df)))
+        # print(np.all(np.isfinite(encoded_speed_dating_df)))
+        # print(encoded_speed_dating_df.shape)
+
+        return encoded_speed_dating_df  # , labelled_speed_dating_df
 
     @staticmethod
     def get_train_test_validation(general_df, dataset_name):
@@ -114,11 +173,8 @@ class DataExploration:
                 'series_of_num_following', axis=1)
             y = general_df['is_spam']
         elif dataset_name is 'speed_dating':
-            enc = preprocessing.OneHotEncoder()
-            enc.fit(general_df)
-            print(general_df.head(5))
-            X = general_df.drop('match', axis=1).drop('decision', axis=1).drop('decision_o', axis=1)
-            y = general_df['match']  # todo should i try on decision?
+            X = general_df.drop('decision', axis=1)
+            y = general_df['decision']
         else:
             print('non-valid dataset chosen')
             exit()

@@ -24,26 +24,21 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', '--method', required=True,
-                        choices=["get_data","dt", 'dnn'])
+                        choices=["get_data", "dt", 'dnn'])
     io_args = parser.parse_args()
     method = io_args.method
 
     if method == "get_data":
         # need to shuffle to respect iid principal for when we split the data
 
-        twitter_df = DataExploration().prepare_twitter_df()
-        twitter_df = shuffle(twitter_df)
+        # need to shuffle to respect iid principal for when we split the data
+        de = DataExploration()
 
-        X = twitter_df.drop('is_spam', axis=1).drop('created_at', axis=1).drop('collected_at', axis=1).drop(
-            'series_of_num_following', axis=1)
-        y = twitter_df['is_spam']
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.20)
-        X_train_nn, X_validation_nn, y_train_nn, y_validation_nn = train_test_split(X_train, y_train,
-                                                                                    test_size=0.125)  # size = 0.1 of orginal
+        twitter_df = de.prepare_twitter_df()
+        speed_dating_df = de.prepare_speed_dating_df()
 
-        # print(X_train)
-        # print(twitter_df.head())
-        # print(twitter_df.shape)
+        X_train, X_test, y_train, y_test, X_train_nn, X_validation_nn, y_train_nn, y_validation_nn = de.get_train_test_validation(
+            twitter_df, 'twitter')
 
     if method == "dt":
         dt_clf = DecisionTree(model_name='dt_wip0', dataset_name='spam_twitter')

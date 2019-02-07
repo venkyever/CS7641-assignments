@@ -6,3 +6,5 @@
 /output/
 /data/
 !/main_notebook.ipynb
+!/main2_notebook.ipynb
+*.pkl
