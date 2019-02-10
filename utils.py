@@ -13,21 +13,23 @@ from sklearn.model_selection import learning_curve, GridSearchCV
 
 
 # Plot distributions of counts
-def plot_distributions(pd_df, title, cols_to_get_distr=None):
+def plot_distributions(pd_df, title, dataset_name, cols_to_get_distr=None):
     if cols_to_get_distr == None:
         cols_to_get_distr = pd_df.columns.values
-    with plt.style.context('ggplot'):
-        fig, axes = plt.subplots(nrows=3, ncols=3, figsize=(20, 22))
+    with plt.style.context('seaborn'):
+        fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(20, 22))
         axes = axes.flatten()
 
         for col, ax in zip(cols_to_get_distr, axes):
-            ax.hist(pd_df[col], histtype='bar')
+            n = ax.hist(pd_df[col], histtype='bar')
+
+            print(n)
             ax.set_title(col + ' Histogram')
-            ax.set(xlabel='Distribution', ylabel='count of {0}'.format(col))
+            ax.set(xlabel=str(col + ' Distribution'), ylabel='count of {0}'.format(col))
 
         plt.suptitle(title + ' Distributions', fontsize=16, verticalalignment='baseline')
         # plt.subplots_adjust(left=0.5)
-
+        plt.savefig(f"./figs/data/{dataset_name}_histogram_matrix.png")
         plt.show()
 
 
@@ -71,7 +73,7 @@ def create_scatterplot_matrix(pd_df, label_column, dataset_name):
     cols_to_plot = np.delete(cols_to_plot, np.where(cols_to_plot == label_column)).tolist()
     print(cols_to_plot)
     pairplot = sns.pairplot(pd_df, hue=label_column, markers=["o", "+"], vars=cols_to_plot)
-    pairplot.savefig(f"./figs/data/{dataset_name}_scatterplot_matrix.png")
+    plt.savefig(f"./figs/data/{dataset_name}_scatterplot_matrix.png")
     return pairplot
 
 
@@ -186,15 +188,15 @@ def plot_learning_curve(estimator, title, X, y, algorithm, dataset_name, model_n
     return plt
 
 
-def plot_iterative_learning_curve(clfObj, trgX, trgY, tstX, tstY, params, clf_type=None, dataset=None):
+def plot_iterative_learning_curve(clfObj, trgX, trgY, tstX, tstY, params, model_name=None, dataset_name=None):
     # also adopted from jontays code
     np.random.seed(42)
-    if clf_type is None or dataset is None:
+    if model_name is None or dataset_name is None:
         raise
-    cv = GridSearchCV(clfObj, n_jobs=1, param_grid=params, refit=True, verbose=10, cv=5, scoring=scorer)
+    cv = GridSearchCV(clfObj, n_jobs=1, param_grid=params, refit=True, verbose=10, cv=5, scoring='accuracy')
     cv.fit(trgX, trgY)
     regTable = pd.DataFrame(cv.cv_results_)
-    regTable.to_csv('./output/ITER_base_{}_{}.csv'.format(clf_type, dataset), index=False)
+    regTable.to_csv('./output/ITER_base_{}_{}.csv'.format(model_name, dataset_name), index=False)
     d = defaultdict(list)
     name = list(params.keys())[0]
     for value in list(params.values())[0]:
@@ -208,8 +210,9 @@ def plot_iterative_learning_curve(clfObj, trgX, trgY, tstX, tstY, params, clf_ty
         d['test acc'].append(accuracy_score(tstY, pred))
         print(value)
     d = pd.DataFrame(d)
-    d.to_csv('./output/ITERtestSET_{}_{}.csv'.format(clf_type, dataset), index=False)
+    d.to_csv('./output/ITERtestSET_{}_{}.csv'.format(model_name, dataset_name), index=False)
     return cv
+
 
 def make_timing_curve(X_train, y_train, X_test, y_test, clf, clfName, dataset):
     # 'adopted' from JonTay's code
@@ -225,8 +228,9 @@ def make_timing_curve(X_train, y_train, X_test, y_test, clf, clfName, dataset):
         print(clfName, dataset, fraction)
     timing_df = pd.DataFrame(timing_df)
     timing_df.to_csv(f'./output/{clfName}_{dataset}_timing.csv')
-    #todo insert plot function
+    # todo insert plot function
     return timing_df
+
 
 def plot_model_timing(title, data_sizes, fit_scores, predict_scores, ylim=None):
     """

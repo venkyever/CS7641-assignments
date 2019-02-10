@@ -133,22 +133,20 @@ class DataExploration:
 
     @staticmethod
     def get_hot_encoded_speed_dating(speed_dating_df):
-        labelled_speed_dating_df = speed_dating_df
+        labelled_speed_dating_df = speed_dating_df.copy()
         le = preprocessing.LabelEncoder()
         ohe = preprocessing.OneHotEncoder()
         cols_to_encode = ['gender', 'race', 'race_o', 'field']
-        encoded_cols = []
         for col in cols_to_encode:
-            encoded_cols.append(str(col + '_encoded'))
-            labelled_speed_dating_df[str(col + '_encoded')] = le.fit_transform(labelled_speed_dating_df[col])
+            labelled_speed_dating_df[col] = le.fit_transform(labelled_speed_dating_df[col])
 
         encoded_speed_dating_df = labelled_speed_dating_df
 
-        for encoded_col, col in zip(encoded_cols, cols_to_encode):
-            X = ohe.fit_transform(X=speed_dating_df[encoded_col].values.reshape(-1, 1)).toarray()
+        for col in cols_to_encode:
+            X = ohe.fit_transform(X=labelled_speed_dating_df[col].values.reshape(-1, 1)).toarray()
             temp_df = pd.DataFrame(X, columns=[col + str(int(i)) for i in range(X.shape[1])])
             encoded_speed_dating_df = pd.concat([encoded_speed_dating_df, temp_df], axis=1)
-            encoded_speed_dating_df = encoded_speed_dating_df.drop(col, axis=1).drop(encoded_col, axis=1)
+            encoded_speed_dating_df = encoded_speed_dating_df.drop(col, axis=1)
 
         for col in encoded_speed_dating_df.columns.values:
             encoded_speed_dating_df[col] = pd.to_numeric(encoded_speed_dating_df[col])
@@ -163,7 +161,7 @@ class DataExploration:
         # print(np.all(np.isfinite(encoded_speed_dating_df)))
         # print(encoded_speed_dating_df.shape)
 
-        return encoded_speed_dating_df  # , labelled_speed_dating_df
+        return encoded_speed_dating_df #, labelled_speed_dating_df, le
 
     @staticmethod
     def get_train_test_validation(general_df, dataset_name):

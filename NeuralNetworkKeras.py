@@ -54,14 +54,11 @@ class NN_Keras:
     def train(self, X_train, y_train, optimizer_tuning=False, override_best_params=False):
 
         if self.best_params is not None and not override_best_params:
-            nn_model = KerasClassifier(build_fn=self.create_model(layer_sizes=self.best_params['layer_sizes'],
-                                                                  learning_rate=self.best_params['learning_rate'],
-                                                                  loss=self.best_params['loss']),
-                                       epochs=self.best_params['epochs'],
-                                       batch_size=self.best_params['batch_size'],
-                                       verbose=0)
+            nn_model = KerasClassifier(build_fn=self.create_model)
             pipe = Pipeline(steps=[('scale', StandardScaler()),
                                    ('dnn', nn_model)])
+
+            pipe.set_params(**self.best_params)
 
             pipe.fit(X_train, y_train)
 
@@ -83,11 +80,11 @@ class NN_Keras:
                 nn_model = KerasClassifier(build_fn=self.create_model, epochs=100, batch_size=10, verbose=0)
 
                 param_grid = {
-                    'dnn__layer_sizes': [[180, 50]],
-                    'dnn__learning_rate': [0.0005, 0.001, 0.05, 0.1],
+                    'dnn__layer_sizes': [[180, 50], [150, 2], [100, 100], [50,1], [250, 20], [200, 1], [5,1]],
+                    'dnn__learning_rate': [0.0005], #, 0.001, 0.05, 0.1],
                     'dnn__loss': ['mean_squared_error'], #, 'logcosh', 'binary_crossentropy',
                     #               'mean_squared_logarithmic_error'],
-                    'dnn__batch_size': [10, 50, 100, 200, 500, 1000],
+                    'dnn__batch_size': [10], #, 50, 100, 200, 500, 1000],
                     'dnn__epochs': [1, 10, 30, 60, 100]
                     # 'momentum': [0.0, 0.2, 0.4, 0.6, 0.8, 0.9] RESULTS SHOWED 0 was best..., pretty useless then
                 }

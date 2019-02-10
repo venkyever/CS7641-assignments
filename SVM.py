@@ -1,3 +1,5 @@
+from math import sqrt, ceil
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -20,7 +22,7 @@ class SVM:
 
         self.svm_model = SVC()  # default classifier
 
-    def train(self, X_train, y_train, override_best_params=False):
+    def train(self, X_train, y_train, params=None, override_best_params=False):
         pipe = Pipeline(steps=[('scale', StandardScaler()),
                                ('svm', self.svm_model)])
         if self.best_params is not None and not override_best_params:
@@ -30,16 +32,32 @@ class SVM:
             self.svm_model = pipe
             estimator = pipe.named_steps['svm']
         else:
-            param_grid = {
-                'svm__kernel': ['rbf'], #['linear', 'poly', 'rbf', 'sigmoid'],
-                'svm__degree': np.arange(1, X_train.shape[1] + 1),
-                'svm__gamma': np.power(2, np.arange(-X_train.shape[1], 1, 2, dtype=float)),
-                'svm__C': np.power(2, np.arange(-X_train.shape[1],0, 2, dtype=float))
-            }
+
+            if params is 'poly':
+                param_grid = {
+                    'svm__kernel': ['poly'],  # rbf, 'linear', 'sigmoid'
+                    'svm__degree': np.arange(1, X_train.shape[1] + 1, int(ceil(sqrt(X_train.shape[1])))),
+                    'svm__gamma': np.power(2, np.arange(-8, 5, 2, dtype=float)),
+                    'svm__C': np.power(2, np.arange(-8, 5, 2, dtype=float))
+                }
+            elif params is 'rbf':
+                param_grid = {
+                    'svm__kernel': ['rbf'],  # rbf
+                    # 'svm__degree': np.arange(1, X_train.shape[1] + 1, int(ceil(sqrt(X_train.shape[1])))),
+                    'svm__gamma': np.power(2, np.arange(-8, 5, 2, dtype=float)),
+                    'svm__C': np.power(2, np.arange(-8, 5, 2, dtype=float))
+                }
+            else:
+                param_grid = {
+                    'svm__kernel': ['linear', 'sigmoid'],  # rbf
+                    # 'svm__degree': np.arange(1, X_train.shape[1] + 1, int(ceil(sqrt(X_train.shape[1])))),
+                    'svm__gamma': np.power(2, np.arange(-8, 5, 2, dtype=float)),
+                    'svm__C': np.power(2, np.arange(-8, 5, 2, dtype=float))
+                }
 
             # scoring = {'Accuracy': make_scorer(accuracy_score)}  # 'AUC': 'roc_auc',
             svm_clf = GridSearchCV(pipe, param_grid, iid=False, cv=5, return_train_score=True, scoring='accuracy',
-                                   verbose=0)
+                                   verbose=2)
             svm_clf.fit(X_train, y_train)
             print("Best parameter (CV score=%0.3f):" % svm_clf.best_score_)
             print(svm_clf.best_params_)
@@ -48,7 +66,7 @@ class SVM:
             self.best_params = svm_clf.best_params_
             estimator = svm_clf.best_estimator_.named_steps['svm']
 
-        plt = plot_learning_curve(title='Learning Curves (SVM)', estimator=estimator, X=X_train, y=y_train, cv=5,
+        plt = plot_learning_curve(title=str('Learning Curves (SVM)'), estimator=estimator, X=X_train, y=y_train, cv=5,
                                   algorithm='SVM', dataset_name=self.dataset_name, model_name=self.model_name)
         plt.show()
 
