@@ -37,6 +37,8 @@ class KNN:
                 'knn__n_neighbors': np.arange(1, 51, 3),
                 'knn__weights': ['uniform', 'distance']
             }
+            if self.dataset_name is 'speed_dating':
+                param_grid['knn__n_neighbors'] =  np.arange(1, 200, 5)
 
             knn_clf = GridSearchCV(pipe, param_grid, iid=False, cv=5, return_train_score=True, scoring='accuracy',
                                     verbose=0)

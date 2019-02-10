@@ -29,6 +29,8 @@ from sklearn import preprocessing
 from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
 
+from utils import create_scatterplot_matrix, plot_violin_distributions, compare_counts_boxplots, plot_distributions
+
 np.random.seed(42)
 random.seed(42)
 
@@ -54,7 +56,7 @@ class DataExploration:
                                         sep='\t', names=tweets_cols, header=None).set_index('user_id')
 
         # add feature of list of following
-        content_polluters_df = content_polluters_df.join(content_polluters_following_df, on='user_id', how='inner')
+        content_polluters_df = content_polluters_df.join(content_polluters_following_df, how='inner')
         content_polluters_df['num_following_changes'] = content_polluters_df.series_of_num_following.apply(
             lambda x: len(x))  # todo this seems wrong..
         # TODO: look to add feature as num of following who are spam
@@ -79,7 +81,7 @@ class DataExploration:
                                            sep='\t', names=tweets_cols, header=None).set_index('user_id')
 
         # add feature of list of following
-        real_users_df = real_users_df.join(real_users_following_df, on='user_id', how='inner')
+        real_users_df = real_users_df.join(real_users_following_df, how='inner')
         real_users_df['num_following_changes'] = real_users_df.series_of_num_following.apply(
             lambda x: len(x))
         # TODO: look to add feature as num of following who are spam
@@ -119,11 +121,7 @@ class DataExploration:
         speed_dating_df = speed_dating_df[cols_of_interest]
         print(speed_dating_df.shape)
 
-        for col in cols_of_interest:
-            speed_dating_df = speed_dating_df[speed_dating_df[col] != "?"]
-
-
-        speed_dating_df = speed_dating_df[~speed_dating_df.isin([np.nan, np.inf, -np.inf]).any(1)]
+        speed_dating_df = speed_dating_df[~speed_dating_df.isin([np.nan, np.inf, -np.inf, "?"]).any(1)]
         speed_dating_df = speed_dating_df.dropna(axis=0)
 
         print('removing empty values shape:')
@@ -161,7 +159,7 @@ class DataExploration:
         # print(np.all(np.isfinite(encoded_speed_dating_df)))
         # print(encoded_speed_dating_df.shape)
 
-        return encoded_speed_dating_df #, labelled_speed_dating_df, le
+        return encoded_speed_dating_df, labelled_speed_dating_df, le
 
     @staticmethod
     def get_train_test_validation(general_df, dataset_name):
@@ -177,9 +175,54 @@ class DataExploration:
             print('non-valid dataset chosen')
             exit()
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.20)
-        X_train_nn, X_validation_nn, y_train_nn, y_validation_nn = train_test_split(X_train, y_train,
-                                                                                    test_size=0.125)  # size = 0.1 of orginal
+        # X_train_nn, X_validation_nn, y_train_nn, y_validation_nn = train_test_split(X_train, y_train,
+        #                                                                             test_size=0.125)  # size = 0.1 of orginal
 
         # print(X_train)
         # print(twitter_df.head())
-        return X_train, X_test, y_train, y_test, X_train_nn, X_validation_nn, y_train_nn, y_validation_nn
+        return X_train, X_test, y_train, y_test, #X_train_nn, X_validation_nn, y_train_nn, y_validation_nn
+
+    @staticmethod
+    def investigate_twitter(twitter_df):
+        # # data processing and investigation
+        data_twitter = twitter_df.drop('created_at', axis=1).drop('collected_at', axis=1).drop(
+                        'series_of_num_following', axis=1)
+        data_twitter['label'] = np.where(data_twitter['is_spam'] == 1, 'spam', 'not_spam')
+        data_twitter = data_twitter.drop('is_spam', axis=1)
+        pos_twitter = data_twitter.loc[data_twitter['label'] == 'spam'].drop('label', axis=1)
+        neg_twitter = data_twitter.loc[data_twitter['label'] == 'not_spam'].drop('label', axis=1)
+
+        create_scatterplot_matrix(data_twitter, "label", 'twitter_df')
+        plot_violin_distributions(data_twitter, title='Violin Plots of Twitter Features', dataset_name='twitter_df', label_column='label')
+        compare_counts_boxplots(positive_pd=pos_twitter, negative_pd=neg_twitter, title='Boxplots of Twitter Features', positive_label='spam', dataset_name='twitter_df')
+
+    @staticmethod
+    def investigate_speed_dating(speed_dating_df, label_encoder):
+        cols_of_interest = ['gender', 'age', 'age_o', 'race', 'race_o', 'importance_same_race',
+                            'importance_same_religion', 'field', 'attractive_important', 'sincere_important',
+                            'intellicence_important', 'funny_important', 'ambtition_important',
+                            'shared_interests_important', 'attractive', 'sincere', 'intelligence', 'funny', 'ambition',
+                            'attractive_partner', 'sincere_partner', 'intelligence_partner', 'funny_partner',
+                            'ambition_partner', 'shared_interests_partner', 'sports', 'tvsports', 'exercise', 'dining',
+                            'museums', 'art', 'hiking', 'gaming', 'clubbing', 'reading', 'tv', 'theater', 'movies',
+                            'concerts', 'music', 'shopping', 'yoga', 'interests_correlate', 'decision']
+
+        cols_embedded = ['gender', 'race', 'race_o', 'field']
+        cols_ints = ['importance_same_race', 'importance_same_religion', 'field', 'attractive_important',
+                     'sincere_important',
+                     'intellicence_important', 'funny_important', 'ambtition_important',
+                     'shared_interests_important', 'attractive', 'sincere', 'intelligence', 'funny', 'ambition',
+                     'attractive_partner', 'sincere_partner', 'intelligence_partner', 'funny_partner',
+                     'ambition_partner', 'shared_interests_partner', 'sports', 'tvsports', 'exercise', 'dining',
+                     'museums', 'art', 'hiking', 'gaming', 'clubbing', 'reading', 'tv', 'theater', 'movies',
+                     'concerts', 'music', 'shopping', 'yoga', 'interests_correlate', 'decision']
+
+        print(speed_dating_df.shape)
+        data_speed_dating = speed_dating_df[cols_embedded]
+        # todo add xlabels
+        plot_distributions(data_speed_dating, 'Distributions of Speed Dating Categorical Features', 'speed_dating')
+        data_speed_dating = speed_dating_df[cols_ints]
+
+        data_speed_dating['label'] = np.where(data_speed_dating['decision'] == 1, 'positive_date', 'negative_date')
+        data_speed_dating = data_speed_dating.drop('decision', axis=1)
+        create_scatterplot_matrix(data_speed_dating, "label", 'speed_dating')

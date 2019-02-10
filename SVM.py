@@ -37,27 +37,26 @@ class SVM:
                 param_grid = {
                     'svm__kernel': ['poly'],  # rbf, 'linear', 'sigmoid'
                     'svm__degree': np.arange(1, X_train.shape[1] + 1, int(ceil(sqrt(X_train.shape[1])))),
-                    'svm__gamma': np.power(2, np.arange(-8, 5, 2, dtype=float)),
-                    'svm__C': np.power(2, np.arange(-8, 5, 2, dtype=float))
+                    'svm__gamma': np.power(2, np.arange(-9, 3, 3, dtype=float)),
+                    'svm__C': np.power(2, np.arange(-8, 3, 3, dtype=float))
                 }
             elif params is 'rbf':
                 param_grid = {
                     'svm__kernel': ['rbf'],  # rbf
                     # 'svm__degree': np.arange(1, X_train.shape[1] + 1, int(ceil(sqrt(X_train.shape[1])))),
-                    'svm__gamma': np.power(2, np.arange(-8, 5, 2, dtype=float)),
-                    'svm__C': np.power(2, np.arange(-8, 5, 2, dtype=float))
+                    'svm__gamma': np.power(2, np.arange(-9, 3, 3, dtype=float)),
+                    'svm__C': np.power(2, np.arange(-8, 3, 3, dtype=float))
                 }
             else:
                 param_grid = {
-                    'svm__kernel': ['linear', 'sigmoid'],  # rbf
-                    # 'svm__degree': np.arange(1, X_train.shape[1] + 1, int(ceil(sqrt(X_train.shape[1])))),
-                    'svm__gamma': np.power(2, np.arange(-8, 5, 2, dtype=float)),
-                    'svm__C': np.power(2, np.arange(-8, 5, 2, dtype=float))
+                    'svm__kernel': ['linear', 'sigmoid'],
+                    'svm__gamma': np.power(2, np.arange(-9, 3, 3, dtype=float)),
+                    'svm__C': np.power(2, np.arange(-8, 3, 3, dtype=float))
                 }
 
             # scoring = {'Accuracy': make_scorer(accuracy_score)}  # 'AUC': 'roc_auc',
             svm_clf = GridSearchCV(pipe, param_grid, iid=False, cv=5, return_train_score=True, scoring='accuracy',
-                                   verbose=2)
+                                   verbose=2, n_jobs=3)
             svm_clf.fit(X_train, y_train)
             print("Best parameter (CV score=%0.3f):" % svm_clf.best_score_)
             print(svm_clf.best_params_)

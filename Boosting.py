@@ -1,15 +1,9 @@
-import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-from sklearn import tree
 from sklearn.ensemble import AdaBoostClassifier
-from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
-from sklearn.model_selection import learning_curve
-from sklearn.pipeline import Pipeline
-
+from sklearn.metrics import classification_report, confusion_matrix
 ### Boosting: do Ada Boost, XGBoost, lightgbm
-from sklearn.metrics import make_scorer
 from sklearn.model_selection import GridSearchCV
+from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
 from DecisionTree import DecisionTreeClassifier
@@ -17,12 +11,12 @@ from utils import plot_learning_curve, save_model
 
 
 class Boosting:
-    def __init__(self, model_name, dataset_name, X_test, y_test, best_params=None):
+    def __init__(self, model_name, dataset_name, best_params=None):
         self.model_name = model_name
         self.dataset_name = dataset_name
         self.best_params = best_params
 
-        self.base_dt_model = DecisionTreeClassifier(X_test, y_test)
+        self.base_dt_model = DecisionTreeClassifier()
 
         self.base_adabooster = AdaBoostClassifier(algorithm='SAMME.R',
                                                   learning_rate=1.,
@@ -43,10 +37,18 @@ class Boosting:
             self.boosting_model = pipe
             estimator = pipe.named_steps['boost']
         else:
+            alphas = np.power(10, np.arange(-4, 0, dtype=float))
+            alphas = np.append(alphas, 0)
+
             param_grid = {
                 'boost__n_estimators': [20, 40, 80, 100, 150, 200],  # [1, 2, 5, 10, 20, 30, 45, 60, 80, 100] #,
-                'boost__base_estimator__max_depth': [1, 2, 4, 6, 8, 10, 12]
+                # 'boost__learning_rate': [1, 0.5, 0.1, 0.05],
+                'boost__base_estimator__alpha': alphas,
+                'boost__base_estimator__max_depth': np.arange(1, 42, 4)
             }
+
+            if self.dataset_name is 'speed_dating':
+                param_grid['boost__base_estimator__max_depth'] = np.arange(1, 42, 4)
 
             boosting_clf = GridSearchCV(pipe, param_grid, iid=False, cv=5, return_train_score=True, scoring='accuracy',
                                         verbose=0)
