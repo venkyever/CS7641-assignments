@@ -164,6 +164,10 @@ def plot_learning_curve(estimator, title, X, y, algorithm, dataset_name, model_n
         plt.ylim(*y_lim)
     plt.xlabel("Training examples")
     plt.ylabel("Score")
+
+    if model_name is 'dt_pruning_1' or model_name is 'boosting_1':
+        N = y.shape[0]
+        train_sizes = [50, 100] + [int(N * x / 10) for x in range(1, 8)]
     train_sizes, train_scores, test_scores = learning_curve(
         estimator, X, y, cv=cv, n_jobs=n_jobs, train_sizes=train_sizes)
     train_scores_mean = np.mean(train_scores, axis=1)
@@ -211,10 +215,10 @@ def plot_iterative_learning_curve(clfObj, trgX, trgY, tstX, tstY, params, model_
         print(value)
     d = pd.DataFrame(d)
     d.to_csv('./output/ITERtestSET_{}_{}.csv'.format(model_name, dataset_name), index=False)
-    return cv
+    return d
 
 
-def make_timing_curve(X_train, y_train, X_test, y_test, clf, clfName, dataset):
+def make_timing_curve(X_train, y_train, X_test, y_test, clf, model_name, dataset_name, alg):
     # 'adopted' from JonTay's code
     timing_df = defaultdict(dict)
     for fraction in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]:
@@ -225,14 +229,19 @@ def make_timing_curve(X_train, y_train, X_test, y_test, clf, clfName, dataset):
         st = clock()
         clf.predict(X_test)
         timing_df['test'][fraction] = clock() - st
-        print(clfName, dataset, fraction)
+        print(model_name, dataset_name, fraction)
     timing_df = pd.DataFrame(timing_df)
-    timing_df.to_csv(f'./output/{clfName}_{dataset}_timing.csv')
-    # todo insert plot function
+    timing_df.to_csv(f'./output/{model_name}_{dataset_name}_timing.csv')
+
+    title = alg + ' ' + dataset_name + ' Timing Curve for Training and Prediction'
+    plot_model_timing(title, alg, model_name, dataset_name,
+    timing_df.index.values * 100,
+    pd.DataFrame(timing_df['train'], index=timing_df.index.values),
+    pd.DataFrame(timing_df['test'], index=timing_df.index.values))
     return timing_df
 
 
-def plot_model_timing(title, data_sizes, fit_scores, predict_scores, ylim=None):
+def plot_model_timing(title, algorithm, model_name, dataset_name, data_sizes, fit_scores, predict_scores, ylim=None):
     """
     Generate a simple plot of the given model timing data
 
@@ -254,32 +263,31 @@ def plot_model_timing(title, data_sizes, fit_scores, predict_scores, ylim=None):
         The predict times
 
     """
+    with plt.style.context('seaborn'):
+        plt.close()
+        plt.figure()
+        plt.title(title)
+        if ylim is not None:
+            plt.ylim(*ylim)
+        plt.xlabel("Training Data Size (% of total)")
+        plt.ylabel("Time (s)")
+        fit_scores_mean = np.mean(fit_scores, axis=1)
+        fit_scores_std = np.std(fit_scores, axis=1)
+        predict_scores_mean = np.mean(predict_scores, axis=1)
+        predict_scores_std = np.std(predict_scores, axis=1)
 
-    plt.close()
-    plt.figure()
-    plt.title(title)
-    if ylim is not None:
-        plt.ylim(*ylim)
-    plt.xlabel("Training Data Size (% of total)")
-    plt.ylabel("Time (s)")
-    fit_scores_mean = np.mean(fit_scores, axis=1)
-    fit_scores_std = np.std(fit_scores, axis=1)
-    predict_scores_mean = np.mean(predict_scores, axis=1)
-    predict_scores_std = np.std(predict_scores, axis=1)
-    plt.grid()
-    plt.tight_layout()
+        plt.fill_between(data_sizes, fit_scores_mean - fit_scores_std,
+                         fit_scores_mean + fit_scores_std, alpha=0.2)
+        plt.fill_between(data_sizes, predict_scores_mean - predict_scores_std,
+                         predict_scores_mean + predict_scores_std, alpha=0.2)
+        plt.plot(data_sizes, predict_scores_mean, 'o-', linewidth=1, markersize=4,
+                 label="Predict time")
+        plt.plot(data_sizes, fit_scores_mean, 'o-', linewidth=1, markersize=4,
+                 label="Fit time")
 
-    plt.fill_between(data_sizes, fit_scores_mean - fit_scores_std,
-                     fit_scores_mean + fit_scores_std, alpha=0.2)
-    plt.fill_between(data_sizes, predict_scores_mean - predict_scores_std,
-                     predict_scores_mean + predict_scores_std, alpha=0.2)
-    plt.plot(data_sizes, predict_scores_mean, 'o-', linewidth=1, markersize=4,
-             label="Predict time")
-    plt.plot(data_sizes, fit_scores_mean, 'o-', linewidth=1, markersize=4,
-             label="Fit time")
-
-    plt.legend(loc="best")
-    return plt
+        plt.legend(loc="best")
+        plt.savefig(f'./figs/timing_curve_{algorithm}_{model_name}_{dataset_name}')
+        plt.show()
 
 
 def _save_cv_results(self):
@@ -300,8 +308,6 @@ def _save_cv_results(self):
     ax.set_xlabel('n_components')
     plt.savefig(f'./figs/cross_validation_{self.model_name}_{self.dataset_name}')
     plt.show()
-
-    # todo make timing curve
 
 
 def save_model(dataset_name, estimator, file_name):

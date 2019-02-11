@@ -51,7 +51,7 @@ class Boosting:
                 param_grid['boost__base_estimator__max_depth'] = np.arange(1, 42, 4)
 
             boosting_clf = GridSearchCV(pipe, param_grid, iid=False, cv=5, return_train_score=True, scoring='accuracy',
-                                        verbose=0)
+                                        verbose=2, n_jobs=3)
             boosting_clf.fit(X_train, y_train)
             print("Best parameter (CV score=%0.3f):" % boosting_clf.best_score_)
             print(boosting_clf.best_params_)

@@ -41,7 +41,7 @@ class KNN:
                 param_grid['knn__n_neighbors'] =  np.arange(1, 200, 5)
 
             knn_clf = GridSearchCV(pipe, param_grid, iid=False, cv=5, return_train_score=True, scoring='accuracy',
-                                    verbose=0)
+                                    verbose=2, n_jobs=3)
             knn_clf.fit(X_train, y_train)
             print("Best parameter (CV score=%0.3f):" % knn_clf.best_score_)
             print(knn_clf.best_params_)

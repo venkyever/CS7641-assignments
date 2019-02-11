@@ -39,10 +39,14 @@ class DecisionTreeClassifier(tree.DecisionTreeClassifier):
         self.training_weights = sample_weight.copy()
         sss = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
         for train_index, test_index in sss.split(self.X_train, self.y_train):
-            self.X_test = self.X_train[test_index]
-            self.y_test = self.y_train.iloc[test_index]
-            self.X_train = self.X_train[train_index]
-            self.y_train = self.y_train.iloc[train_index]
+            self.X_test = X[test_index]
+            self.X_train = X[train_index]
+            try:
+                self.y_test = self.y_train.iloc[test_index]
+                self.y_train = self.y_train.iloc[train_index]
+            except:
+                self.y_test = self.y_train[test_index]
+                self.y_train = self.y_train[train_index]
             self.test_weights = sample_weight[test_index]
             self.training_weights = sample_weight[train_index]
         super().fit(self.X_train, self.y_train, sample_weight=self.training_weights, check_input=check_input,
@@ -119,7 +123,7 @@ class DecisionTree:
             save_model(self.dataset_name, pipe, 'dt_estimator')
 
             self.dt_model = pipe
-            estimator = pipe.named_steps['dt']
+            estimator = pipe
         else:
             alphas = np.power(10, np.arange(-4, 0, dtype=float))
             alphas = np.append(alphas, 0)
@@ -134,7 +138,7 @@ class DecisionTree:
                 param_grid['dt__max_depth'] = np.arange(1, 42, 4)
 
             dt_clf = GridSearchCV(pipe, param_grid, iid=False, cv=5, return_train_score=True, scoring='accuracy',
-                                  verbose=0)
+                                  verbose=1, n_jobs=3)
             dt_clf.fit(X_train, y_train)
 
             print("Best parameter (CV score=%0.3f):" % dt_clf.best_score_)
@@ -143,7 +147,7 @@ class DecisionTree:
             self.dt_model = dt_clf
             self.best_params = dt_clf.best_params_
             save_model(self.dataset_name, dt_clf.best_estimator_, 'dt_estimator')
-            estimator = dt_clf.best_estimator_.named_steps['dt']
+            estimator = dt_clf.best_estimator_
 
         plt = plot_learning_curve(title='Learning Curves (DT)', estimator=estimator, X=X_train, y=y_train,
                                   algorithm='DT', dataset_name=self.dataset_name, model_name=self.model_name,

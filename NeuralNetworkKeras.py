@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 from keras.backend import set_session
-from keras.optimizers import SGD, Adam
+from keras.optimizers import SGD, Adam, rmsprop
 from sklearn.metrics import confusion_matrix, classification_report
 from sklearn.model_selection import GridSearchCV, learning_curve
 from keras.models import Sequential
@@ -38,15 +38,14 @@ class NN_Keras:
 
         return model
 
-    def create_model(self, layer_sizes=None, learning_rate=0.01, loss='mean_squared_error'):
-        if layer_sizes is None:
-            layer_sizes = [12, 1]
+    def create_model(self, layer_sizes=None, learning_rate=0.01, loss='binary_crossentropy'):
         model = Sequential()
-        model.add(Dense(layer_sizes[0], input_dim=299, activation='relu'))
-        model.add(Dense(1, input_dim=layer_sizes[1], activation='softmax'))
+        model.add(Dense(units=layer_sizes[0], activation='relu'))
+        model.add(Dense(units=layer_sizes[1], activation='relu'))
+        model.add(Dense(units=1, activation='sigmoid'))
 
         # Adam was best for twitter data
-        optimizer = Adam(lr=learning_rate)
+        optimizer = rmsprop(lr=0.05)
         model.compile(loss=loss, optimizer=optimizer, metrics=['accuracy'])
 
         return model
@@ -80,19 +79,21 @@ class NN_Keras:
                 nn_model = KerasClassifier(build_fn=self.create_model, epochs=100, batch_size=10, verbose=0)
 
                 param_grid = {
-                    'dnn__layer_sizes': [[180, 50], [150, 2], [100, 100], [50,1], [250, 20], [200, 1], [5,1]],
-                    'dnn__learning_rate': [0.0005], #, 0.001, 0.05, 0.1],
-                    'dnn__loss': ['mean_squared_error'], #, 'logcosh', 'binary_crossentropy',
+                    'dnn__layer_sizes': [[180, 50], [100, 100], [50, 100]],
+                    'dnn__learning_rate': [0.001, 0.05, 0.1, 1],
+                    'dnn__loss': ['binary_crossentropy'], #, 'logcosh', 'mean_squared_error',
                     #               'mean_squared_logarithmic_error'],
-                    'dnn__batch_size': [10], #, 50, 100, 200, 500, 1000],
-                    'dnn__epochs': [1, 10, 30, 60, 100]
+                    'dnn__batch_size': [10, 100, 500],
+                    'dnn__epochs': [1, 5, 20]
                     # 'momentum': [0.0, 0.2, 0.4, 0.6, 0.8, 0.9] RESULTS SHOWED 0 was best..., pretty useless then
                 }
+                if self.dataset_name is 'twitter':
+                    param_grid['dnn__layer_sizes'] = [[12, 5], [100, 100], [5, 10]]
 
             pipe = Pipeline(steps=[('scale', StandardScaler()),
                                    ('dnn', nn_model)])
 
-            grid = GridSearchCV(estimator=pipe, param_grid=param_grid, cv=5, n_jobs=3, verbose=2)
+            grid = GridSearchCV(estimator=pipe, param_grid=param_grid, cv=5, n_jobs=16, verbose=2)
             grid_result = grid.fit(X_train, y_train)
 
             # summarize results
