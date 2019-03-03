@@ -40,67 +40,76 @@ class DataExploration:
         return
 
     @staticmethod
-    def prepare_twitter_df():
-        # data frames columns
-        user_cols = ['user_id', 'created_at', 'collected_at', 'num_following', 'num_followers',
-                     'num_tweets', 'len_of_screen_name', 'len_of_profile_description']
-        following_cols = ['user_id', 'series_of_num_following']
-        tweets_cols = ['user_id', 'tweet_id', 'tweet', 'created_at']
+    def prepare_twitter_df(rewrite=False):
+        try:
+            if rewrite:
+                raise ValueError('rewriting twitter_df.csv')
+            twitter_df = pd.read_csv('./data/twitter_df.csv', index=True, index_label='user_id')
+        except:
+            # data frames columns
+            user_cols = ['user_id', 'created_at', 'collected_at', 'num_following', 'num_followers',
+                         'num_tweets', 'len_of_screen_name', 'len_of_profile_description']
+            following_cols = ['user_id', 'series_of_num_following']
+            tweets_cols = ['user_id', 'tweet_id', 'tweet', 'created_at']
 
-        # content polluters (spam users)
-        content_polluters_df = pd.read_csv('./data/social_honeypot/content_polluters.txt',
-                                           sep='\t', names=user_cols, header=None).set_index('user_id')
-        content_polluters_following_df = pd.read_csv('./data/social_honeypot/content_polluters_followings.txt',
-                                                     sep='\t', names=following_cols, header=None).set_index('user_id')
-        content_tweets_df = pd.read_csv('./data/social_honeypot/content_polluters_tweets.txt',
-                                        sep='\t', names=tweets_cols, header=None).set_index('user_id')
+            # content polluters (spam users)
+            content_polluters_df = pd.read_csv('./data/social_honeypot/content_polluters.txt',
+                                               sep='\t', names=user_cols, header=None).set_index('user_id')
+            content_polluters_following_df = pd.read_csv('./data/social_honeypot/content_polluters_followings.txt',
+                                                         sep='\t', names=following_cols, header=None).set_index(
+                'user_id')
+            content_tweets_df = pd.read_csv('./data/social_honeypot/content_polluters_tweets.txt',
+                                            sep='\t', names=tweets_cols, header=None).set_index('user_id')
 
-        # add feature of list of following
-        content_polluters_df = content_polluters_df.join(content_polluters_following_df, how='inner')
-        content_polluters_df['num_following_changes'] = content_polluters_df.series_of_num_following.apply(
-            lambda x: len(x))  # todo this seems wrong..
-        # TODO: look to add feature as num of following who are spam
+            # add feature of list of following
+            content_polluters_df = content_polluters_df.join(content_polluters_following_df, how='inner')
+            content_polluters_df['num_following_changes'] = content_polluters_df.series_of_num_following.apply(
+                lambda x: len(x))  # todo this seems wrong..
+            # TODO: look to add feature as num of following who are spam
 
-        # add feature for counts of tweets per user
-        # content_polluters_df = content_polluters_df.join(
-        #     content_tweets_df.groupby('user_id')['tweet_id'].count(), on='user_id', how='inner').rename(
-        #     columns={'tweet_id': 'num_tweets'})
-        # TODO: utilize other features from this data set besides count of tweets
+            # add feature for counts of tweets per user
+            # content_polluters_df = content_polluters_df.join(
+            #     content_tweets_df.groupby('user_id')['tweet_id'].count(), on='user_id', how='inner').rename(
+            #     columns={'tweet_id': 'num_tweets'})
+            # TODO: utilize other features from this data set besides count of tweets
 
-        # add label
-        content_polluters_df['is_spam'] = 1
+            # add label
+            content_polluters_df['is_spam'] = 1
 
-        print(content_polluters_df.shape)
+            print(content_polluters_df.shape)
 
-        # real users
-        real_users_df = pd.read_csv('./data/social_honeypot/legitimate_users.txt',
-                                    sep='\t', names=user_cols, header=None).set_index('user_id')
-        real_users_following_df = pd.read_csv('./data/social_honeypot/legitimate_users_followings.txt',
-                                              sep='\t', names=following_cols, header=None).set_index('user_id')
-        real_users_tweets_df = pd.read_csv('./data/social_honeypot/legitimate_users_tweets.txt',
-                                           sep='\t', names=tweets_cols, header=None).set_index('user_id')
+            # real users
+            real_users_df = pd.read_csv('./data/social_honeypot/legitimate_users.txt',
+                                        sep='\t', names=user_cols, header=None).set_index('user_id')
+            real_users_following_df = pd.read_csv('./data/social_honeypot/legitimate_users_followings.txt',
+                                                  sep='\t', names=following_cols, header=None).set_index('user_id')
+            real_users_tweets_df = pd.read_csv('./data/social_honeypot/legitimate_users_tweets.txt',
+                                               sep='\t', names=tweets_cols, header=None).set_index('user_id')
 
-        # add feature of list of following
-        real_users_df = real_users_df.join(real_users_following_df, how='inner')
-        real_users_df['num_following_changes'] = real_users_df.series_of_num_following.apply(
-            lambda x: len(x))
-        # TODO: look to add feature as num of following who are spam
+            # add feature of list of following
+            real_users_df = real_users_df.join(real_users_following_df, how='inner')
+            real_users_df['num_following_changes'] = real_users_df.series_of_num_following.apply(
+                lambda x: len(x))
+            # TODO: look to add feature as num of following who are spam
 
-        # add feature for counts of tweets per user
-        # real_users_df = real_users_df.join(
-        #     real_users_tweets_df.groupby('user_id')['tweet_id'].count(), on='user_id', how='inner').rename(
-        #     columns={'tweet_id': 'num_tweets'})
-        # TODO: utilize other features from this data set besides count of tweets
+            # add feature for counts of tweets per user
+            # real_users_df = real_users_df.join(
+            #     real_users_tweets_df.groupby('user_id')['tweet_id'].count(), on='user_id', how='inner').rename(
+            #     columns={'tweet_id': 'num_tweets'})
+            # TODO: utilize other features from this data set besides count of tweets
 
-        # add label
-        real_users_df['is_spam'] = -1
+            # add label
+            real_users_df['is_spam'] = -1
 
-        print(real_users_df.shape)
+            print(real_users_df.shape)
 
-        twitter_df = pd.concat([content_polluters_df, real_users_df])
+            twitter_df = pd.concat([content_polluters_df, real_users_df])
+            twitter_df = twitter_df.drop('created_at', axis=1).drop('collected_at', axis=1).drop('series_of_num_following', axis=1)
+
+            shuffled_df = shuffle(twitter_df)
+            shuffled_df.to_csv('./data/twitter_df.csv', index=True, index_label='user_id')
 
         print(twitter_df.shape)
-
         return twitter_df
 
     @staticmethod
@@ -158,6 +167,9 @@ class DataExploration:
         # print(np.any(np.isnan(encoded_speed_dating_df)))
         # print(np.all(np.isfinite(encoded_speed_dating_df)))
         # print(encoded_speed_dating_df.shape)
+        encoded_speed_dating_df = encoded_speed_dating_df.replace({'decision': 0}, -1)
+        shuffled_df = shuffle(encoded_speed_dating_df)
+        shuffled_df.to_csv('./data/encoded_speed_dating_df.csv')
 
         return encoded_speed_dating_df, labelled_speed_dating_df, le
 
@@ -165,8 +177,7 @@ class DataExploration:
     def get_train_test_validation(general_df, dataset_name):
         general_df = shuffle(general_df)
         if dataset_name is 'twitter':
-            X = general_df.drop('is_spam', axis=1).drop('created_at', axis=1).drop('collected_at', axis=1).drop(
-                'series_of_num_following', axis=1)
+            X = general_df.drop('is_spam', axis=1)
             y = general_df['is_spam']
         elif dataset_name is 'speed_dating':
             X = general_df.drop('decision', axis=1)
@@ -180,21 +191,23 @@ class DataExploration:
 
         # print(X_train)
         # print(twitter_df.head())
-        return X_train, X_test, y_train, y_test, #X_train_nn, X_validation_nn, y_train_nn, y_validation_nn
+        return X_train, X_test, y_train, y_test,  # X_train_nn, X_validation_nn, y_train_nn, y_validation_nn
 
     @staticmethod
     def investigate_twitter(twitter_df):
         # # data processing and investigation
         data_twitter = twitter_df.drop('created_at', axis=1).drop('collected_at', axis=1).drop(
-                        'series_of_num_following', axis=1)
+            'series_of_num_following', axis=1)
         data_twitter['label'] = np.where(data_twitter['is_spam'] == 1, 'spam', 'not_spam')
         data_twitter = data_twitter.drop('is_spam', axis=1)
         pos_twitter = data_twitter.loc[data_twitter['label'] == 'spam'].drop('label', axis=1)
         neg_twitter = data_twitter.loc[data_twitter['label'] == 'not_spam'].drop('label', axis=1)
 
         create_scatterplot_matrix(data_twitter, "label", 'twitter_df')
-        plot_violin_distributions(data_twitter, title='Violin Plots of Twitter Features', dataset_name='twitter_df', label_column='label')
-        compare_counts_boxplots(positive_pd=pos_twitter, negative_pd=neg_twitter, title='Boxplots of Twitter Features', positive_label='spam', dataset_name='twitter_df')
+        plot_violin_distributions(data_twitter, title='Violin Plots of Twitter Features', dataset_name='twitter_df',
+                                  label_column='label')
+        compare_counts_boxplots(positive_pd=pos_twitter, negative_pd=neg_twitter, title='Boxplots of Twitter Features',
+                                positive_label='spam', dataset_name='twitter_df')
 
     @staticmethod
     def investigate_speed_dating(speed_dating_df, label_encoder):

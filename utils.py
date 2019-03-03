@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.externals import joblib
 from sklearn.metrics import accuracy_score
+from sklearn.utils import compute_sample_weight
 
 from sklearn.model_selection import learning_curve, GridSearchCV
 
@@ -313,3 +314,7 @@ def _save_cv_results(self):
 def save_model(dataset_name, estimator, file_name):
     file_name = dataset_name + '_' + file_name + '_' + str(datetime.datetime.now().date()) + '.pkl'
     joblib.dump(estimator, f'./models/{file_name}')
+
+def balanced_accuracy(truth, pred):
+    wts = compute_sample_weight('balanced', truth)
+    return accuracy_score(truth, pred, sample_weight=wts)
